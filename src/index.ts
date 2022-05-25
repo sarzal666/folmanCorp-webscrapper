@@ -3,41 +3,72 @@ import express from 'express';
 import axios from 'axios';
 import cheerio from 'cheerio';
 import Page from './Page';
+import Pages from './Pages';
+import Dataset from './Dataset';
 
 config();
-
 const port = process.env.SERVER_PORT;
-
 const app = express();
 
-const url = 'https://www.abk.it/en/collections';
+app.get('/', (request, response) => {
+  Pages.forEach((pageData) => {
+    const datasets = pageData.dataset.map(
+      (set) => new Dataset(set.name, set.location, set.parentSelector, set.type)
+    );
+    const page = new Page(
+      pageData.name,
+      pageData.languages,
+      pageData.url,
+      datasets
+    );
 
-const pages = [
-  {
-    name: 'abk',
-    url: 'https://www.abk.it/en/',
-    targetUrl: 'https://www.abk.it/en/collections',
-  },
-];
+    page.dataset.forEach((dataset: Dataset) => {
+      const lang = page.languages[0];
+      const datasetUrl = page.getUrlWithLang(lang) + dataset.location;
+      const scrapped = {
+        name: dataset.name,
+        location: datasetUrl,
+        html: '',
+      };
 
-app.get('/', (req, res) => {
-  pages.forEach((scrapData) => {
-    const page = new Page(scrapData.url, scrapData.targetUrl);
+      axios(datasetUrl)
+        .then((res) => {
+          const html_data = res.data;
+          const $ = cheerio.load(html_data);
 
-    axios(page.targetUrl).then((response) => {
-      const htmlData = response.data;
-      const $ = cheerio.load(htmlData);
+          const container = $(dataset.parentSelector);
+
+          /* here I'm fixing Collection image url from relative to absolute and getting data to result */
+          container.each((parentIndex, parentElement) => {
+            $(parentElement)
+              .find('div > div.card__three')
+              .each((cardId, cardEl) => {
+                $(cardEl)
+                  .children()
+                  .each((id, el) => {
+                    if (id === 0) {
+                      // first element is our image to fix
+                      if ('attribs' in el) {
+                        el.attribs.src = `${page.url}/${el.attribs.src}`;
+                      }
+                    }
+                  });
+              });
+          });
+
+          response.send(container.html());
+        })
+        .catch((err) => console.log(err));
     });
-  });
-  axios(url).then((response) => {
-    const links: cheerio.Element[] = [];
-
-    const html_data = response.data;
-    const $ = cheerio.load(html_data);
-    // console.log($);
-    // res.send($);
-    const container = $('div.containerColl.products-grid').html();
-    res.send(container);
+    // axios(url).then((response) => {
+    //   const links: cheerio.Element[] = [];
+    //
+    //   const html_data = response.data;
+    //   const $ = cheerio.load(html_data);
+    //   // console.log($);
+    //   // res.send($);
+    //   const container = $('div.containerColl.products-grid').html();
+    //   res.send(container);
     // $('div.containerColl.products-grid').each((parentIndex, parentElement) => {
     //   $(parentElement)
     //     .children()
