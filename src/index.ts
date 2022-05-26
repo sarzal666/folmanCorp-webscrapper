@@ -40,48 +40,34 @@ app.get('/', (request, response) => {
 
           /* here I'm fixing Collection image url from relative to absolute and getting data to result */
           container.each((parentIndex, parentElement) => {
-            $(parentElement)
-              .find('div > div.card__three')
-              .each((cardId, cardEl) => {
-                $(cardEl)
-                  .children()
-                  .each((id, el) => {
-                    if (id === 0) {
-                      // first element is our image to fix
-                      if ('attribs' in el) {
-                        el.attribs.src = `${page.url}/${el.attribs.src}`;
-                      }
+            const nodes = $(parentElement).find('div > div.card__three');
+
+            //TODO: abk page has a lot of duplicated elements in this Node, let's filter it before processing
+
+            nodes.each((cardId, cardEl) => {
+              $(cardEl)
+                .children()
+                .each((id, el) => {
+                  if ('tagName' in el && el.tagName === 'img') {
+                    if ('attribs' in el) {
+                      el.attribs.src = `${page.url}/${el.attribs.src}`;
                     }
-                  });
-              });
+                  }
+
+                  // yeeey it's our collection name !
+                  if ('tagName' in el && el.tagName === 'p') {
+                    if ('attribs' in el) {
+                      // console.log($(el).text());
+                    }
+                  }
+                });
+            });
           });
 
           response.send(container.html());
         })
         .catch((err) => console.log(err));
     });
-    // axios(url).then((response) => {
-    //   const links: cheerio.Element[] = [];
-    //
-    //   const html_data = response.data;
-    //   const $ = cheerio.load(html_data);
-    //   // console.log($);
-    //   // res.send($);
-    //   const container = $('div.containerColl.products-grid').html();
-    //   res.send(container);
-    // $('div.containerColl.products-grid').each((parentIndex, parentElement) => {
-    //   $(parentElement)
-    //     .children()
-    //     .each((childId, childEl) => {
-    //       links.push(childEl);
-    //     });
-    // });
-    //
-    // // @ts-ignore
-    // const a = links[0].cloneNode(true);
-    // console.log(a.attribs.href);
-    // console.log(a.html());
-    // res.send('text');
   });
 
   // res.send(links);
