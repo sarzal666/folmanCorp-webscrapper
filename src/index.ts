@@ -5,6 +5,7 @@ import cheerio from 'cheerio';
 import Page from './Page';
 import Pages from './Pages';
 import Dataset from './Dataset';
+import Element = cheerio.Element;
 
 config();
 const port = process.env.SERVER_PORT;
@@ -37,8 +38,8 @@ app.get('/', (request, response) => {
           const $ = cheerio.load(html_data);
 
           const container = $(dataset.parentSelector);
-
-          /* here I'm fixing Collection image url from relative to absolute and getting data to result */
+          let testing: Array<Element> = [];
+          /* getting data to result */
           container.each((parentIndex, parentElement) => {
             const nodes = $(parentElement).find('div > div.card__three');
 
@@ -48,6 +49,7 @@ app.get('/', (request, response) => {
               $(cardEl)
                 .children()
                 .each((id, el) => {
+                  // here I'm fixing Collection image url from relative to absolute
                   if ('tagName' in el && el.tagName === 'img') {
                     if ('attribs' in el) {
                       el.attribs.src = `${page.url}/${el.attribs.src}`;
@@ -62,6 +64,22 @@ app.get('/', (request, response) => {
                   }
                 });
             });
+
+            testing = Array.from(nodes).reduce((accum, node) => {
+              if (
+                !accum.some((value) => {
+                  console.log(value);
+                  return (
+                    $(value).find('div p').text() ===
+                    $(node).find('div p').text()
+                  );
+                })
+              ) {
+                accum.push(node);
+              }
+
+              return accum;
+            }, testing);
           });
 
           response.send(container.html());
